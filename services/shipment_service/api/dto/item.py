@@ -13,6 +13,7 @@ class ItemCreateDTO:
 class ItemDTO:
     """DTO для ответа API / представления Item"""
     item_id: UUID
+    shipment_id: UUID
     name: str
     quantity: int
     weight: float

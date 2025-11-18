@@ -10,10 +10,12 @@ class Item:
     quantity: Quantity
     weight: Weight
     item_id: UUID = field(default_factory=uuid4)
+    shipment_id: UUID = field(default_factory=uuid4)
 
     def to_dict(self) -> dict:
         return {
             "item_id": str(self.item_id),
+            "shipment_id": self.shipment_id,
             "name": self.name,
             "quantity": self.quantity.value,
             "weight": self.weight.value,

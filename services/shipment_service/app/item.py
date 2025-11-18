@@ -26,6 +26,9 @@ class ItemService:
     def get_all(self) -> List[Item]:
         pass
 
+    def get_by_shipment(self, shipment_id: UUID) -> List[Item]:
+        pass
+
     # ---- Бизнес методы ----
     def increase_quantity(self, item_id: UUID, quantity: int) -> Item:
         """Увеличить количество item"""

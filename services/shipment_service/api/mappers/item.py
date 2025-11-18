@@ -1,12 +1,15 @@
-from services.shipment_service.domain import Item
+from uuid import UUID
+
+from services.shipment_service.domain.entities import Item
 from services.shipment_service.domain.value_objects.quantity import Quantity
 from services.shipment_service.domain.value_objects.weight import Weight
 from services.shipment_service.api.dto.item import ItemDTO, ItemCreateDTO, ItemUpdateDTO
 
 class ItemMapper:
     @staticmethod
-    def create_dto_to_entity(dto: ItemCreateDTO) -> Item:
+    def create_dto_to_entity(dto: ItemCreateDTO, shipment_id: UUID) -> Item:
         return Item(
+            shipment_id = shipment_id,
             name=dto.name,
             quantity=Quantity(dto.quantity),
             weight=Weight(dto.weight)
@@ -25,6 +28,7 @@ class ItemMapper:
     @staticmethod
     def entity_to_dto(entity: Item) -> ItemDTO:
         return ItemDTO(
+            shipment_id=entity.shipment_id,
             item_id=entity.item_id,
             name=entity.name,
             quantity=entity.quantity.value,
