@@ -223,6 +223,7 @@ class DomainEventConverter:
         SagaCompensating: ("saga.compensating", "saga", "saga_id"),
     }
 
+
     @classmethod
     def to_event(
             cls,
@@ -263,6 +264,7 @@ class DomainEventConverter:
             payload=payload,
             correlation_id=correlation_id
         )
+
 
     @staticmethod
     def _serialize_payload(payload: Dict) -> Dict:
