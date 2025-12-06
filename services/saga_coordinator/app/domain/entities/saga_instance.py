@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from enum import Enum
 from datetime import datetime
 
-from services.saga_coordinator.app.domain.entities.saga_event import SagaEvent
+from saga_coordinator.app.domain.entities.saga_event import SagaEvent
 
 
 class SagaStatus(str, Enum):
