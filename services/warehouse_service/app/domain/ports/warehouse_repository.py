@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from services.warehouse_service.app.domain.entities import Warehouse
+from warehouse_service.app.domain.entities import Warehouse
 
 
 class WarehouseRepositoryPort(ABC):

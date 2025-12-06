@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from services.saga_coordinator.app.domain.entities.saga_event import SagaEvent
-from services.saga_coordinator.app.domain.entities.saga_instance import SagaInstance
+from saga_coordinator.app.domain.entities.saga_event import SagaEvent
+from saga_coordinator.app.domain.entities.saga_instance import SagaInstance
 
 
 class SagaRepositoryPort(ABC):
