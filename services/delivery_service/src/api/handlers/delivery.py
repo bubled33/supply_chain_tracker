@@ -6,16 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
 
 from libs.messaging.events import CourierAssigned, DomainEventConverter, DeliveryInTransit, DeliveryCompleted
-# Импорт портов и конвертера событий
 from libs.messaging.ports import EventQueuePort
-# Импорт зависимостей (getters)
 from src.api.deps.getters import (
     get_delivery_service,
     get_courier_service,
     get_event_queue
 )
 
-# Импорт DTO
 from src.api.dto.delivery import (
     DeliveryDTO,
     DeliveryCreateDTO,
@@ -23,7 +20,6 @@ from src.api.dto.delivery import (
 )
 from src.api.mappers.delivery import DeliveryMapper
 
-# Импорт Сервисов и Сущностей
 from src.app.services.courier import CourierService
 from src.app.services.delivery import DeliveryService
 from src.domain.entities.delivery import Delivery, DeliveryStatus
@@ -46,7 +42,6 @@ async def create_delivery(
     Создать новую доставку (назначить курьера на груз).
     Публикует событие CourierAssigned.
     """
-    # 1. Получаем объект курьера
     courier = await courier_service.get(dto.courier_id)
     if not courier:
         raise HTTPException(
@@ -54,14 +49,10 @@ async def create_delivery(
             detail=f"Courier {dto.courier_id} not found"
         )
 
-    # 2. Маппинг DTO -> Entity
     entity: Delivery = DeliveryMapper.create_dto_to_entity(dto, courier)
 
-    # 3. Сохранение через сервис
-    created: Delivery = await create(entity)
+    created: Delivery = await delivery_service.create(entity)
 
-    # 4. Публикация события CourierAssigned
-    # Используем datetime.now(timezone.utc) для assigned_at
     domain_event = CourierAssigned(
         delivery_id=created.delivery_id,
         courier_id=created.courier.courier_id,
@@ -122,15 +113,13 @@ async def update_delivery(
     Обновить данные доставки.
     Если меняется курьер -> CourierAssigned (новое назначение).
     """
-    # 1. Получаем существующую доставку
-    delivery = await get(delivery_id)
+    delivery = await delivery_service.get(delivery_id)
     if delivery is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Delivery {delivery_id} not found"
         )
 
-    # 2. Если меняется курьер, нужно найти нового
     new_courier = None
     is_courier_changed = False
     if dto.courier_id is not None and dto.courier_id != delivery.courier.courier_id:
@@ -142,28 +131,20 @@ async def update_delivery(
             )
         is_courier_changed = True
 
-    # 3. Обновляем Entity
     updated_entity = DeliveryMapper.update_entity_from_dto(delivery, dto, new_courier)
 
-    # 4. Сохраняем
-    saved = await update(updated_entity)
+    saved = await delivery_service.update(updated_entity)
 
-    # 5. Публикуем событие
-    # Если сменился курьер - логично кинуть CourierAssigned
     if is_courier_changed:
         domain_event = CourierAssigned(
             delivery_id=saved.delivery_id,
             courier_id=saved.courier.courier_id,
             shipment_id=saved.shipment_id,
-            estimated_delivery=datetime.now(),  # Упрощение, берем текущее
+            estimated_delivery=datetime.now(),
             assigned_at=datetime.now(timezone.utc)
         )
         event = DomainEventConverter.to_event(domain_event)
         await event_queue.publish_event(event, topic="delivery-events")
-
-    # Если просто обновился статус или время, можно не кидать событие,
-    # либо добавить Generic событие "DeliveryDetailsUpdated", но в вашем списке его нет.
-    # Оставим пока публикацию только при смене курьера или используем специфичные эндпоинты ниже.
 
     return DeliveryMapper.entity_to_dto(saved)
 
@@ -185,17 +166,12 @@ async def mark_delivery_in_transit(
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    # Бизнес-логика
-    await service.mark_as_in_transit(delivery_id)  # Лучше использовать метод сервиса
-    # Или если через update:
-    # delivery.update_status(DeliveryStatus.IN_TRANSIT)
-    # saved = await service.update(delivery)
-    saved = await service.get(delivery_id)  # Получаем обновленную версию
+    await service.mark_as_in_transit(delivery_id)
+    saved = await service.get(delivery_id)
 
-    # Событие DeliveryInTransit
     domain_event = DeliveryInTransit(
         delivery_id=saved.delivery_id,
-        current_location="Warehouse",  # Заглушка, или передавать в body запроса
+        current_location="Warehouse",
         updated_at=datetime.now(timezone.utc)
     )
     await event_queue.publish_event(DomainEventConverter.to_event(domain_event), topic="delivery-events")
@@ -221,17 +197,13 @@ async def complete_delivery(
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    # Бизнес-логика
-    # await service.mark_as_delivered(delivery_id, date.today())
-    # Для примера используем прямое обновление если метода нет в интерфейсе, но лучше через сервис
     delivery.mark_delivered(actual_arrival=date.today())
     saved = await service.update(delivery)
 
-    # Событие DeliveryCompleted
     domain_event = DeliveryCompleted(
         delivery_id=saved.delivery_id,
         delivered_at=datetime.now(timezone.utc),
-        recipient_name="Unknown",  # Можно брать из request body
+        recipient_name="Unknown",
         recipient_signature=None
     )
     await event_queue.publish_event(DomainEventConverter.to_event(domain_event), topic="delivery-events")

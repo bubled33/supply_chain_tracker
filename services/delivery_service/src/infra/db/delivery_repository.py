@@ -6,10 +6,6 @@ from src.domain.entities import Delivery, Courier
 from src.domain.entities.delivery import DeliveryStatus
 from src.domain.ports import DeliveryRepositoryPort
 
-
-# from domain.errors import DeliveryNotFoundError # Раскомментируйте, если ошибка определена
-
-
 class AsyncPostgresDeliveryRepository(DeliveryRepositoryPort):
     """Асинхронный репозиторий для Delivery"""
 
@@ -30,8 +26,6 @@ class AsyncPostgresDeliveryRepository(DeliveryRepositoryPort):
     async def save(self, delivery: Delivery) -> Delivery:
         """UPSERT для delivery. Сохраняем ID курьера как foreign key"""
         async with self._pool.acquire() as conn:
-            # Обратите внимание: возвращаем только поля delivery,
-            # так как объект courier у нас уже есть в памяти
             row = await conn.fetchrow("""
                 INSERT INTO deliveries (
                     delivery_id, shipment_id, courier_id, status, 
@@ -61,7 +55,6 @@ class AsyncPostgresDeliveryRepository(DeliveryRepositoryPort):
                                       delivery.updated_at
                                       )
 
-            # Возвращаем тот же инстанс (или можно создать новый, но поля те же)
             return delivery
 
     async def get(self, delivery_id: UUID) -> Optional[Delivery]:
@@ -107,22 +100,18 @@ class AsyncPostgresDeliveryRepository(DeliveryRepositoryPort):
                 "DELETE FROM deliveries WHERE delivery_id = $1",
                 delivery_id
             )
-            # if result == "DELETE 0":
-            #    raise DeliveryNotFoundError(f"Delivery {delivery_id} not found")
 
     @staticmethod
     def _row_to_entity(row) -> Delivery:
         """
         Преобразовать row (результат JOIN) в entity Delivery с вложенным Courier.
         """
-        # 1. Восстанавливаем объект курьера
         courier = Courier(
             courier_id=row['courier_id'],
             name=row['courier_name'],
-            contact_info=row['courier_contact']
+            contact_info=row['courier_contact_info']
         )
 
-        # 2. Восстанавливаем объект доставки
         delivery = Delivery(
             delivery_id=row['delivery_id'],
             shipment_id=row['shipment_id'],
@@ -132,8 +121,6 @@ class AsyncPostgresDeliveryRepository(DeliveryRepositoryPort):
             actual_arrival=row['actual_arrival']
         )
 
-        # Так как created_at/updated_at создаются в __init__ автоматически новыми,
-        # их нужно перезаписать значениями из БД
         delivery.created_at = row['created_at']
         delivery.updated_at = row['updated_at']
 

@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from src.api.deps.getters import get_shipment_service, get_event_queue
-from src.api.dto import ShipmentCreateDTO, ShipmentUpdateDTO
 from src.api.dto.shipment import ShipmentDTO, LocationDTO
 from src.domain.errors import ShipmentNotFoundError
 from src.api.handlers.shipment import shipments_router

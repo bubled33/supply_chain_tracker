@@ -13,9 +13,6 @@ from src.api.dto.courier import (
 from src.api.mappers.courier import CourierMapper
 from src.app.services.courier import CourierService
 
-# Если нужны специфичные ошибки:
-# from domain.errors.courier_errors import CourierNotFoundError
-
 courier_router = APIRouter(prefix="/couriers", tags=["couriers"])
 
 
@@ -31,13 +28,10 @@ async def create_courier(
     """
     Регистрация нового курьера.
     """
-    # DTO -> Entity
     entity = CourierMapper.create_dto_to_entity(dto)
 
-    # Сохранение
     created = await service.create(entity)
 
-    # Ответ
     return CourierMapper.entity_to_dto(created)
 
 
@@ -90,10 +84,8 @@ async def update_courier(
             detail=f"Courier {courier_id} not found"
         )
 
-    # Обновляем сущность через маппер
     updated_entity = CourierMapper.update_entity_from_dto(courier, dto)
 
-    # Сохраняем
     saved = await service.update(updated_entity)
 
     return CourierMapper.entity_to_dto(saved)
@@ -108,7 +100,6 @@ async def delete_courier(
         service: CourierService = Depends(get_courier_service),
 ):
     """Удалить курьера из системы"""
-    # Проверка существования перед удалением (или полагаемся на ошибку сервиса)
     courier = await service.get(courier_id)
     if courier is None:
         raise HTTPException(

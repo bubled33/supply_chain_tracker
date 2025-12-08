@@ -55,8 +55,7 @@ class AsyncPostgresCourierRepository(CourierRepositoryPort):
                 "DELETE FROM couriers WHERE courier_id = $1",
                 courier_id
             )
-            # if result == "DELETE 0":
-            #    raise CourierNotFoundError(f"Courier {courier_id} not found")
+
 
     @staticmethod
     def _row_to_entity(row) -> Courier:

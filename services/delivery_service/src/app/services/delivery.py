@@ -17,8 +17,6 @@ class DeliveryService:
     ):
         self._repository = repository
 
-    # ---- CRUD ----
-
     async def create(self, delivery: Delivery) -> Delivery:
         """
         Создать новую доставку.
@@ -55,44 +53,28 @@ class DeliveryService:
         """Получить все доставки"""
         return await self._repository.get_all()
 
-    # ---- Методы выборки ----
-
     async def get_by_shipment(self, shipment_id: UUID) -> List[Delivery]:
         return await self._repository.get_by_shipment(shipment_id)
 
     async def get_active_shipments(self) -> List[Delivery]:
         """Получить все доставки, которые еще не завершены (не DELIVERED/CONFIRMED)"""
-        # Логика может быть сложнее, например выборка нескольких статусов.
-        # Для простоты используем один из методов репозитория или фильтруем.
-        # Здесь предполагаем, что репозиторий умеет фильтровать, или мы делаем это в коде.
-        # Лучше расширить порт репозитория методом get_active_deliveries, но пока так:
-        # Для примера возьмем IN_TRANSIT
         return await self._repository.get_by_status(DeliveryStatus.IN_TRANSIT)
 
     async def get_in_transit_shipments(self) -> List[Delivery]:
         return await self._repository.get_by_status(DeliveryStatus.IN_TRANSIT)
 
-    # ---- Бизнес методы (Смена статусов) ----
-
     async def mark_as_received(self, delivery_id: UUID) -> Delivery:
         """Перевести в статус RECEIVED (на складе)"""
-        # Т.к. статуса RECEIVED нет в вашем Enum DeliveryStatus,
-        # используем ближайший логический или добавляем его в Enum.
-        # Допустим, это начало пути -> ASSIGNED
         delivery = await self._get_or_raise(delivery_id)
         # Логика проверки допустимости перехода может быть здесь
         if delivery.status == DeliveryStatus.DELIVERED:
             raise DeliveryStatusTransitionError("Cannot move back from DELIVERED")
 
-        # Обновляем статус (если бы был статус RECEIVED)
-        # delivery.update_status(DeliveryStatus.RECEIVED)
-        # Для примера просто сохраняем
         return await self._repository.save(delivery)
 
     async def mark_as_ready_for_delivery(self, delivery_id: UUID) -> Delivery:
         """Перевести в статус готовности (если такой есть)"""
         delivery = await self._get_or_raise(delivery_id)
-        # delivery.update_status(DeliveryStatus.READY)
         return await self._repository.save(delivery)
 
     async def mark_as_in_transit(self, delivery_id: UUID) -> Delivery:
@@ -136,13 +118,11 @@ class DeliveryService:
             raise DeliveryStatusTransitionError("Cannot reassign courier for finished delivery")
 
         delivery.courier = new_courier
-        # Важно обновить updated_at
         from datetime import datetime
         delivery.updated_at = datetime.utcnow()
 
         return await self._repository.save(delivery)
 
-    # Вспомогательный метод
     async def _get_or_raise(self, delivery_id: UUID) -> Delivery:
         delivery = await self._repository.get(delivery_id)
         if delivery is None:
