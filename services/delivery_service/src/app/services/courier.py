@@ -15,8 +15,6 @@ class CourierService:
     ):
         self._repository = repository
 
-    # ---- CRUD ----
-
     async def create(self, courier: Courier) -> Courier:
         """
         Создать нового курьера.
@@ -54,9 +52,7 @@ class CourierService:
         """
         Получить всех курьеров.
         """
-        return await self._repository.get_all()
-
-    # ---- Бизнес методы ----
+        return await self._repx
 
     async def update_contact_info(self, courier_id: UUID, new_contact_info: str) -> Courier:
         """

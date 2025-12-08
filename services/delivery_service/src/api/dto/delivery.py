@@ -11,8 +11,6 @@ class DeliveryCreateDTO:
     shipment_id: UUID
     courier_id: UUID
     estimated_arrival: Optional[date] = None
-    # Статус при создании часто опускают (по умолчанию ASSIGNED),
-    # но можно разрешить передать явный
     status: Optional[DeliveryStatus] = DeliveryStatus.ASSIGNED
 
 @dataclass
@@ -20,7 +18,7 @@ class DeliveryDTO:
     """DTO для ответа API / представления Delivery"""
     delivery_id: UUID
     shipment_id: UUID
-    courier_id: UUID  # Возвращаем ID, как в методе to_dict
+    courier_id: UUID
     status: DeliveryStatus
     created_at: datetime
     updated_at: datetime

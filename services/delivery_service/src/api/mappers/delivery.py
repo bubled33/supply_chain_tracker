@@ -28,21 +28,17 @@ class DeliveryMapper:
         """
         Если dto подразумевает смену курьера, сервис должен передать new_courier.
         """
-        # 1. Смена курьера
         if dto.courier_id is not None and new_courier is not None:
-            # Дополнительная проверка целостности
             if new_courier.courier_id == dto.courier_id:
                 entity.courier = new_courier
                 entity.updated_at = datetime.utcnow()
 
-        # 2. Фиксация доставки (имеет приоритет, т.к. меняет и статус, и время)
         if dto.actual_arrival is not None:
             entity.mark_delivered(dto.actual_arrival)
-        # 3. Просто смена статуса
+
         elif dto.status is not None:
             entity.update_status(dto.status)
 
-        # 4. Обновление ожидаемого времени
         if dto.estimated_arrival is not None:
             entity.estimated_arrival = dto.estimated_arrival
             entity.updated_at = datetime.utcnow()
@@ -54,7 +50,7 @@ class DeliveryMapper:
         return DeliveryDTO(
             delivery_id=entity.delivery_id,
             shipment_id=entity.shipment_id,
-            courier_id=entity.courier.courier_id,  # Достаем ID из связанной сущности
+            courier_id=entity.courier.courier_id,
             status=entity.status,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
