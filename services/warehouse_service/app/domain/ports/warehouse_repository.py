@@ -1,22 +1,32 @@
-from abc import ABC, abstractmethod
+from typing import Protocol, List, Optional
 from uuid import UUID
 
-from warehouse_service.app.domain.entities import Warehouse
+from app.domain.entities import Warehouse
 
 
-class WarehouseRepositoryPort(ABC):
-    @abstractmethod
-    def add_warehouse(self, warehouse: Warehouse) -> Warehouse:
-        pass
+class WarehouseRepositoryPort(Protocol):
+    """Порт для работы со складами в репозитории"""
 
-    @abstractmethod
-    def get_warehouse(self, warehouse_id: UUID) -> Warehouse:
-        pass
+    async def save(self, warehouse: Warehouse) -> Warehouse:
+        """
+        Сохранить склад (создание или обновление).
+        """
+        ...
 
-    @abstractmethod
-    def update_warehouse(self, warehouse: Warehouse) -> Warehouse:
-        pass
+    async def get(self, warehouse_id: UUID) -> Optional[Warehouse]:
+        """
+        Получить склад по ID.
+        """
+        ...
 
-    @abstractmethod
-    def list_warehouses(self) -> list[Warehouse]:
-        pass
+    async def get_all(self) -> List[Warehouse]:
+        """
+        Получить все склады.
+        """
+        ...
+
+    async def delete(self, warehouse_id: UUID) -> None:
+        """
+        Удалить склад по ID.
+        """
+        ...

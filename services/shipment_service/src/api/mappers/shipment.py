@@ -1,8 +1,8 @@
 from datetime import datetime
 
+from libs.value_objects.location import Location
 from libs.value_objects.timestamp import Timestamp
 from src.domain.value_objects.shipment_status import ShipmentStatus
-from src.domain.value_objects.location import Location
 from src.api.dto.shipment import ShipmentDTO, ShipmentCreateDTO, ShipmentUpdateDTO, \
     LocationDTO
 
