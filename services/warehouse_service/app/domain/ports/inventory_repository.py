@@ -1,22 +1,32 @@
-from abc import ABC, abstractmethod
+from typing import Protocol, List, Optional
 from uuid import UUID
 
-from warehouse_service.app.domain.entities.inventory_record import InventoryRecord
+from app.domain.entities import InventoryRecord
 
 
-class InventoryRepositoryPort(ABC):
-    @abstractmethod
-    def add_record(self, record: InventoryRecord) -> InventoryRecord:
-        pass
+class InventoryRepositoryPort(Protocol):
+    """Порт для работы с InventoryRecord в репозитории"""
 
-    @abstractmethod
-    def get_record(self, record_id: UUID) -> InventoryRecord:
-        pass
+    async def save(self, record: InventoryRecord) -> InventoryRecord:
+        """
+        Сохранить запись инвентаря (создание или обновление).
+        """
+        ...
 
-    @abstractmethod
-    def update_record(self, record: InventoryRecord) -> InventoryRecord:
-        pass
+    async def get(self, record_id: UUID) -> Optional[InventoryRecord]:
+        """
+        Получить запись инвентаря по ID.
+        """
+        ...
 
-    @abstractmethod
-    def list_records_by_shipment(self, shipment_id: UUID) -> list[InventoryRecord]:
-        pass
+    async def list_by_shipment(self, shipment_id: UUID) -> List[InventoryRecord]:
+        """
+        Получить записи инвентаря по ID отправления.
+        """
+        ...
+
+    async def delete(self, record_id: UUID) -> None:
+        """
+        Удалить запись инвентаря по ID.
+        """
+        ...

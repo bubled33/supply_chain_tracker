@@ -3,9 +3,9 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
+from libs.value_objects.location import Location
 from libs.value_objects.timestamp import Timestamp
 from ..value_objects.shipment_status import ShipmentStatus
-from ..value_objects.location import Location
 
 @dataclass
 class Shipment:
