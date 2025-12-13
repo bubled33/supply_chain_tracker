@@ -1,6 +1,6 @@
 from typing import List, AsyncIterator
 import json
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer, ConsumerRecord
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 
 from .base import Event, Command
 from .ports import EventQueuePort
@@ -29,18 +29,20 @@ class KafkaEventQueueAdapter(EventQueuePort):
             await self._producer.start()
         return self._producer
 
-    async def publish_event(self, event: Event, topic: str) -> None:
-        """Публикация события в Kafka"""
+    async def publish_event(self, event: Event, *topics: str) -> None:
+        """Публикация события в несколько топиков Kafka"""
         producer = await self._get_producer()
 
         # Используем aggregate_id как ключ для партиционирования
         key = str(event.aggregate_id)
         value = event.to_dict()
 
-        await producer.send_and_wait(topic, value=value, key=key)
+        # Отправляем в каждый топик последовательно
+        for topic in topics:
+            await producer.send_and_wait(topic, value=value, key=key)
 
-    async def publish_command(self, command: Command, topic: str) -> None:
-        """Публикация команды в Kafka"""
+    async def publish_command(self, command: Command, *topics: str) -> None:
+        """Публикация команды в несколько топиков Kafka"""
         producer = await self._get_producer()
 
         key = str(command.aggregate_id)
@@ -52,18 +54,20 @@ class KafkaEventQueueAdapter(EventQueuePort):
             'correlation_id': str(command.correlation_id) if command.correlation_id else None
         }
 
-        await producer.send_and_wait(topic, value=value, key=key)
+        for topic in topics:
+            await producer.send_and_wait(topic, value=value, key=key)
 
-    async def consume_event(self, topic: str) -> AsyncIterator[Event]:
-        """Чтение событий из Kafka"""
+    async def consume_event(self, *topics: str) -> AsyncIterator[Event]:
+        """Чтение событий из нескольких топиков Kafka"""
+        # AIOKafkaConsumer принимает топики как позиционные аргументы
         consumer = AIOKafkaConsumer(
-            topic,
+            *topics,
             bootstrap_servers=self._bootstrap_servers,
             group_id=self._group_id,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
             key_deserializer=lambda k: k.decode('utf-8') if k else None,
-            auto_offset_reset='earliest',  # Читать с начала при первом подключении
-            enable_auto_commit=True,  # Автокоммит offset
+            auto_offset_reset='earliest',
+            enable_auto_commit=True,
         )
 
         await consumer.start()
@@ -73,10 +77,10 @@ class KafkaEventQueueAdapter(EventQueuePort):
         finally:
             await consumer.stop()
 
-    async def consume_command(self, topic: str) -> AsyncIterator[Command]:
-        """Чтение команд из Kafka"""
+    async def consume_command(self, *topics: str) -> AsyncIterator[Command]:
+        """Чтение команд из нескольких топиков Kafka"""
         consumer = AIOKafkaConsumer(
-            topic,
+            *topics,
             bootstrap_servers=self._bootstrap_servers,
             group_id=self._group_id,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
@@ -97,3 +101,12 @@ class KafkaEventQueueAdapter(EventQueuePort):
         if self._producer is not None:
             await self._producer.stop()
             self._producer = None
+
+    async def __aenter__(self) -> 'KafkaEventQueueAdapter':
+        """Async context manager entry"""
+        await self._get_producer()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit"""
+        await self.close()

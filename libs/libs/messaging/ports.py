@@ -6,20 +6,20 @@ from libs.messaging.base import Event, Command
 class EventQueuePort(Protocol):
     """Порт для работы с очередью событий и команд (Kafka, RabbitMQ, etc.)"""
 
-    async def publish_event(self, event: Event, topic: str) -> None:
-        """Опубликовать событие в топик"""
+    async def publish_event(self, event: Event, *topics: str) -> None:
+        """Опубликовать событие в один или несколько топиков"""
         ...
 
-    async def publish_command(self, command: Command, topic: str) -> None:
-        """Опубликовать команду в топик"""
+    async def publish_command(self, command: Command, *topics: str) -> None:
+        """Опубликовать команду в один или несколько топиков"""
         ...
 
-    def consume_event(self, topic: str) -> AsyncIterator[Event]:
-        """Читать события из топика"""
+    def consume_event(self, *topics: str) -> AsyncIterator[Event]:
+        """Читать события из одного или нескольких топиков"""
         ...
 
-    def consume_command(self, topic: str) -> AsyncIterator[Command]:
-        """Читать команды из топика"""
+    def consume_command(self, *topics: str) -> AsyncIterator[Command]:
+        """Читать команды из одного или нескольких топиков"""
         ...
 
     async def close(self) -> None:

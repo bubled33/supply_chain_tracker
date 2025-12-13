@@ -265,6 +265,12 @@ class DomainEventConverter:
             correlation_id=correlation_id
         )
 
+    @classmethod
+    def get_event_type_name(cls, event_class: Type) -> str:
+        """Безопасное получение строкового имени события по его классу"""
+        if event_class not in cls._EVENT_TYPE_MAP:
+            raise ValueError(f"Unknown event class: {event_class.__name__}")
+        return cls._EVENT_TYPE_MAP[event_class][0]
 
     @staticmethod
     def _serialize_payload(payload: Dict) -> Dict:

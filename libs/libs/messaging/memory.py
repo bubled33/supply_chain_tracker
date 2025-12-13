@@ -1,5 +1,4 @@
 from typing import List, AsyncIterator, Dict, Any
-import json
 import asyncio
 from collections import defaultdict
 from datetime import datetime
@@ -35,23 +34,24 @@ class InMemoryEventQueueAdapter(EventQueuePort):
             self._producer_started = True
         return self
 
-    async def publish_event(self, event: Event, topic: str) -> None:
-        """Публикация события в память"""
+    async def publish_event(self, event: Event, *topics: str) -> None:
+        """Публикация события в один или несколько топиков в памяти"""
         value = event.to_dict()
         key = str(event.aggregate_id)
 
-        message = {
-            'key': key,
-            'value': value,
-            'topic': topic,
-            'timestamp': datetime.utcnow().isoformat(),
-        }
+        for topic in topics:
+            message = {
+                'key': key,
+                'value': value,
+                'topic': topic,
+                'timestamp': datetime.utcnow().isoformat(),
+            }
 
-        InMemoryEventQueueAdapter._events_storage[topic].append(message)
-        print(f"[MOCK] Published event to '{topic}': {event.event_type} (id={event.event_id})")
+            InMemoryEventQueueAdapter._events_storage[topic].append(message)
+            print(f"[MOCK] Published event to '{topic}': {event.event_type} (id={event.event_id})")
 
-    async def publish_command(self, command: Command, topic: str) -> None:
-        """Публикация команды в память"""
+    async def publish_command(self, command: Command, *topics: str) -> None:
+        """Публикация команды в один или несколько топиков в памяти"""
         key = str(command.aggregate_id)
         value = {
             'command_id': str(command.command_id),
@@ -61,65 +61,89 @@ class InMemoryEventQueueAdapter(EventQueuePort):
             'correlation_id': str(command.correlation_id) if command.correlation_id else None
         }
 
-        message = {
-            'key': key,
-            'value': value,
-            'topic': topic,
-            'timestamp': datetime.utcnow().isoformat(),
-        }
+        for topic in topics:
+            message = {
+                'key': key,
+                'value': value,
+                'topic': topic,
+                'timestamp': datetime.utcnow().isoformat(),
+            }
 
-        InMemoryEventQueueAdapter._commands_storage[topic].append(message)
-        print(f"[MOCK] Published command to '{topic}': {command.command_type} (id={command.command_id})")
+            InMemoryEventQueueAdapter._commands_storage[topic].append(message)
+            print(f"[MOCK] Published command to '{topic}': {command.command_type} (id={command.command_id})")
 
-    async def consume_event(self, topic: str) -> AsyncIterator[Event]:
-        """Чтение событий из памяти (polling)"""
-        print(f"[MOCK] Consumer started for events topic '{topic}'")
-        InMemoryEventQueueAdapter._consumers_running[f"event_{topic}"] = True
+    async def consume_event(self, *topics: str) -> AsyncIterator[Event]:
+        """Чтение событий из одного или нескольких топиков (polling)"""
+        topics_str = ", ".join(topics)
+        print(f"[MOCK] Consumer started for events topics: [{topics_str}]")
 
-        consumed_count = 0
+        # Ключ для остановки консьюмера — уникальный для набора топиков или одного вызова
+        # Для упрощения используем составной ключ
+        consumer_key = f"event_consumer_{hash(topics)}"
+        InMemoryEventQueueAdapter._consumers_running[consumer_key] = True
 
-        try:
-            while InMemoryEventQueueAdapter._consumers_running.get(f"event_{topic}", False):
-                messages = InMemoryEventQueueAdapter._events_storage.get(topic, [])
-
-                # Читаем новые сообщения начиная с consumed_count
-                for i in range(consumed_count, len(messages)):
-                    message = messages[i]
-                    event = Event.from_dict(message['value'])
-                    consumed_count += 1
-                    print(f"[MOCK] Consumed event from '{topic}': {event.event_type}")
-                    yield event
-
-                # Polling интервал
-                await asyncio.sleep(0.1)
-        finally:
-            InMemoryEventQueueAdapter._consumers_running[f"event_{topic}"] = False
-            print(f"[MOCK] Consumer stopped for events topic '{topic}'")
-
-    async def consume_command(self, topic: str) -> AsyncIterator[Command]:
-        """Чтение команд из памяти (polling)"""
-        print(f"[MOCK] Consumer started for commands topic '{topic}'")
-        InMemoryEventQueueAdapter._consumers_running[f"command_{topic}"] = True
-
-        consumed_count = 0
+        # Отслеживаем offset для каждого топика отдельно
+        offsets = {topic: 0 for topic in topics}
 
         try:
-            while InMemoryEventQueueAdapter._consumers_running.get(f"command_{topic}", False):
-                messages = InMemoryEventQueueAdapter._commands_storage.get(topic, [])
+            while InMemoryEventQueueAdapter._consumers_running.get(consumer_key, False):
+                received_anything = False
 
-                # Читаем новые сообщения начиная с consumed_count
-                for i in range(consumed_count, len(messages)):
-                    message = messages[i]
-                    command = Command.from_dict(message['value'])
-                    consumed_count += 1
-                    print(f"[MOCK] Consumed command from '{topic}': {command.command_type}")
-                    yield command
+                for topic in topics:
+                    messages = InMemoryEventQueueAdapter._events_storage.get(topic, [])
+                    current_offset = offsets[topic]
 
-                # Polling интервал
-                await asyncio.sleep(0.1)
+                    # Читаем новые сообщения начиная с current_offset для данного топика
+                    if current_offset < len(messages):
+                        # Читаем все доступные новые сообщения пачкой
+                        for i in range(current_offset, len(messages)):
+                            message = messages[i]
+                            event = Event.from_dict(message['value'])
+                            offsets[topic] += 1
+                            print(f"[MOCK] Consumed event from '{topic}': {event.event_type}")
+                            yield event
+                            received_anything = True
+
+                # Если ничего не прочитали ни из одного топика, спим
+                if not received_anything:
+                    await asyncio.sleep(0.1)
+
         finally:
-            InMemoryEventQueueAdapter._consumers_running[f"command_{topic}"] = False
-            print(f"[MOCK] Consumer stopped for commands topic '{topic}'")
+            InMemoryEventQueueAdapter._consumers_running[consumer_key] = False
+            print(f"[MOCK] Consumer stopped for events topics: [{topics_str}]")
+
+    async def consume_command(self, *topics: str) -> AsyncIterator[Command]:
+        """Чтение команд из одного или нескольких топиков (polling)"""
+        topics_str = ", ".join(topics)
+        print(f"[MOCK] Consumer started for commands topics: [{topics_str}]")
+
+        consumer_key = f"command_consumer_{hash(topics)}"
+        InMemoryEventQueueAdapter._consumers_running[consumer_key] = True
+
+        offsets = {topic: 0 for topic in topics}
+
+        try:
+            while InMemoryEventQueueAdapter._consumers_running.get(consumer_key, False):
+                received_anything = False
+
+                for topic in topics:
+                    messages = InMemoryEventQueueAdapter._commands_storage.get(topic, [])
+                    current_offset = offsets[topic]
+
+                    if current_offset < len(messages):
+                        for i in range(current_offset, len(messages)):
+                            message = messages[i]
+                            command = Command.from_dict(message['value'])
+                            offsets[topic] += 1
+                            print(f"[MOCK] Consumed command from '{topic}': {command.command_type}")
+                            yield command
+                            received_anything = True
+
+                if not received_anything:
+                    await asyncio.sleep(0.1)
+        finally:
+            InMemoryEventQueueAdapter._consumers_running[consumer_key] = False
+            print(f"[MOCK] Consumer stopped for commands topics: [{topics_str}]")
 
     async def close(self) -> None:
         """Закрыть mock producer"""
