@@ -1,4 +1,3 @@
-# libs/logging/json_logger.py
 import json
 import logging
 import sys
@@ -6,7 +5,6 @@ from datetime import datetime, timezone
 from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
-# Глобальный контекст для correlation_id и прочего
 correlation_id_var: ContextVar[Optional[str]] = ContextVar("correlation_id", default=None)
 service_name_var: ContextVar[Optional[str]] = ContextVar("service_name", default=None)
 environment_var: ContextVar[Optional[str]] = ContextVar("environment", default="local")

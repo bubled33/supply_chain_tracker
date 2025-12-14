@@ -1,1 +1,1 @@
-from .saga_repository import SagaRepositoryPort
+from .saga_instance_repository import SagaRepositoryPort

@@ -16,3 +16,4 @@ class SagaRepositoryPort(Protocol):
 
     async def list_active(self) -> List[SagaInstance]:
         ...
+
