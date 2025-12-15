@@ -17,6 +17,7 @@ aiokafka = "^0.12.0"
 libs = {path = "../../libs", develop = true}
 pytest = "^9.0.2"
 httpx = "^0.28.1"
+yoyo-migrations = "^9.0.0"
 
 [build-system]
 requires = ["poetry-core"]
