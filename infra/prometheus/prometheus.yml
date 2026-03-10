@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: delivery-service
+    static_configs:
+      - targets: ["delivery-service:8000"]
+
+  - job_name: warehouse-service
+    static_configs:
+      - targets: ["warehouse-service:8001"]
+
+  - job_name: shipment-service
+    static_configs:
+      - targets: ["shipment-service:8002"]
+
+  - job_name: saga-coordinator
+    static_configs:
+      - targets: ["saga-coordinator:8000"]
+
+  - job_name: blockchain-service
+    static_configs:
+      - targets: ["blockchain-service:8000"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

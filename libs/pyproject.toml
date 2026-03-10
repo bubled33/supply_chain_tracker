@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "libs"
+version = "0.1.0"
+description = ""
+authors = ["Михаил <58465577+bubled33@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+asyncpg = "^0.31.0"
+fastapi = "^0.123.10"
+aiokafka = "^0.12.0"
+prometheus-client = "^0.23.1"
+redis = "^7.1.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+bcrypt = "^4.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
